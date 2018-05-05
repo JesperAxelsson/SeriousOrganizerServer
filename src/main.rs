@@ -3,12 +3,11 @@
 
 use std::ptr::{null, null_mut};
 
-use winapi::um::namedpipeapi::{CreateNamedPipeW, ConnectNamedPipe};
+use winapi::um::namedpipeapi::{CreateNamedPipeW, ConnectNamedPipe, DisconnectNamedPipe};
 use winapi::um::winbase::{PIPE_ACCESS_DUPLEX, PIPE_TYPE_BYTE, PIPE_TYPE_MESSAGE, PIPE_READMODE_MESSAGE };
 use winapi::um::handleapi::INVALID_HANDLE_VALUE;
 use winapi::shared::minwindef::{FALSE, TRUE, LPVOID, DWORD};
 use winapi::um::fileapi::{ReadFile};
-
 
 fn main() {
     println!("Hello, world!");
@@ -21,20 +20,27 @@ fn main() {
             PIPE_ACCESS_DUPLEX,
             PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE,
             1, // Max instances
-            1024*16, // Out buffer
-            1024*16, // In buffer
+            1024, // Out buffer
+            1024, // In buffer
             0, // default timeout
             null_mut());
 
         while h_pipe != INVALID_HANDLE_VALUE {
             let connected = ConnectNamedPipe(h_pipe, null_mut());
             if connected != FALSE {
+                println!("Connected!");
                 let mut buf = [0u8; 1024];
                 let mut dw_read: DWORD = 0;
-                while ReadFile(h_pipe, &mut buf as *mut _ as LPVOID, (buf.len()-1) as u32, &mut dw_read, null_mut()) != FALSE {
-                    println!("Data: {:?}", [0..dw_read])
+                while ReadFile(h_pipe, &mut buf as *mut _ as LPVOID, ((buf.len())-1) as u32, &mut dw_read, null_mut()) != FALSE {
+                    let s = String::from_utf8_lossy(&buf[0..(dw_read as usize)]);
+
+                    println!("Data: {:?}", s);
+//                    println!("Data: {:?}", to_string(&buf[0..(dw_read as usize)]));
                 }
+            } else {
+                DisconnectNamedPipe(h_pipe);
             }
+
         }
     }
 
