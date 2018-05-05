@@ -1,5 +1,6 @@
 #![allow(unused_imports)]
 #[cfg(windows)] extern crate winapi;
+extern crate serious_organizer_lib;
 
 use std::ptr::{null, null_mut};
 
@@ -8,6 +9,7 @@ use winapi::um::winbase::{PIPE_ACCESS_DUPLEX, PIPE_TYPE_BYTE, PIPE_TYPE_MESSAGE,
 use winapi::um::handleapi::INVALID_HANDLE_VALUE;
 use winapi::shared::minwindef::{FALSE, TRUE, LPVOID, DWORD};
 use winapi::um::fileapi::{ReadFile};
+use serious_organizer_lib::dir_search;
 
 fn main() {
     println!("Hello, world!");

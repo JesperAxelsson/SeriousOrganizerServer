@@ -1,9 +1,10 @@
 [package]
-name = "test_pipes"
-version = "0.1.0"
+name = "serious_organizer_server"
+version = "0.1.1"
 authors = ["Jesper Axelsson <jesperaxe@gmail.com>"]
 
 [dependencies]
+serious_organizer_lib = { git = "https://github.com/JesperAxelsson/SeriousOrganizerLib" }
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["winuser", "ntdef", "namedpipeapi", "minwinbase", "minwindef", "winbase", "handleapi", "fileapi" ] }
