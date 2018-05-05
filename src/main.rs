@@ -4,9 +4,6 @@
 use std::ptr::{null, null_mut};
 
 use winapi::um::namedpipeapi::{CreateNamedPipeW, ConnectNamedPipe};
-// use winapi::um::namedpipeapi::*;
-// use winapi::shared::ntdef::NULL;
-// use winapi::um::minwinbase;
 use winapi::um::winbase::{PIPE_ACCESS_DUPLEX, PIPE_TYPE_BYTE, PIPE_TYPE_MESSAGE, PIPE_READMODE_MESSAGE };
 use winapi::um::handleapi::INVALID_HANDLE_VALUE;
 use winapi::shared::minwindef::{FALSE, TRUE, LPVOID, DWORD};
@@ -39,8 +36,8 @@ fn main() {
                 }
             }
         }
-
     }
+
     println!("Farewell, cruel world!");
 }
 
