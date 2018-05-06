@@ -5,7 +5,6 @@ authors = ["Jesper Axelsson <jesperaxe@gmail.com>"]
 
 [dependencies]
 serious_organizer_lib = { git = "https://github.com/JesperAxelsson/SeriousOrganizerLib" }
-bson = "*"
 rmp-serde = "0.13.7"
 serde = "1.0"
 serde_derive = "1.0"
