@@ -5,6 +5,11 @@ authors = ["Jesper Axelsson <jesperaxe@gmail.com>"]
 
 [dependencies]
 serious_organizer_lib = { git = "https://github.com/JesperAxelsson/SeriousOrganizerLib" }
+bson = "*"
+rmp-serde = "0.13.7"
+serde = "1.0"
+serde_derive = "1.0"
+time = "0.1.39"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["winuser", "ntdef", "namedpipeapi", "minwinbase", "minwindef", "winbase", "handleapi", "fileapi" ] }
