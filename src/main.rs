@@ -1,7 +1,5 @@
 #![allow(unused_imports)]
 
-#[macro_use(bson, doc)]
-extern crate bson;
 extern crate rmp_serde as rmps;
 extern crate serde;
 #[macro_use] extern crate serde_derive;
@@ -22,6 +20,11 @@ use winapi::um::fileapi::{ReadFile, WriteFile};
 use serious_organizer_lib::dir_search;
 use std::mem::transmute;
 
+
+use serde::{Deserialize, Serialize};
+use rmps::{Deserializer, Serializer};
+
+
 const BUFFER_SIZE: u32 = 1024;
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -35,24 +38,28 @@ use std::time::{Duration, Instant};
 fn main() {
     println!("Hello, world!");
 
-//    let mut test = Test {
-//        id: String::from("Hello"),
-//        thing: 21,
-//    };
+    let mut test = Test {
+        id: String::from("Hello"),
+        thing: 21,
+    };
 
-//    let start = PreciseTime::now();
-//
-//    let mut i = 0;
-//    while i < 1_000_000 {
-//
-//        let tt = bson::to_bson( &test).expect("Failed to encode bson");
-//        let tt2 = bson::from_bson::< Test > (tt).expect("Failed to decode bson");
-//
-//        i = i+1;
-//    }
-//    let end = PreciseTime::now();
+    let start = PreciseTime::now();
 
-//    println!("Took: {:?} ms", start.to(end).num_milliseconds());
+    let mut out_buf = Vec::new();
+    let mut i = 0;
+    while i < 1_000_000 {
+
+        test.serialize(&mut Serializer::new(&mut out_buf)).expect("Failed to serialize");
+
+        let mut de = Deserializer::new(&out_buf[0..out_buf.len()]);
+        test = Deserialize::deserialize(&mut de).expect("Failed to deserialize");
+
+
+        i = i+1;
+    }
+    let end = PreciseTime::now();
+
+    println!("Took: {:?} ms", start.to(end).num_milliseconds());
 
     let pipe_name = to_wstring("\\\\.\\pipe\\dude");
 
@@ -83,25 +90,22 @@ fn main() {
                 ) != FALSE
                 {
 
-                    use std::io::Cursor;
-//                    let s = String::from_utf8_lossy(&buf[0..(dw_read as usize)]);
-                    let doc = bson::decode_document(&mut Cursor::new(&buf[0..(dw_read as usize)])).expect("Failed to decode document");
+                    let mut de = Deserializer::new(&buf[0..(dw_read as usize)]);
+                    let test: Test = Deserialize::deserialize(&mut de).expect("Failed to deserialize");
+                    println!("Data: {:?}", test);
 
-                    let tt2 = bson::from_bson::<Test>(bson::Bson::from(doc)).expect("Failed to decode bson");
-                    println!("Data: {:?}", tt2);
-//                    println!("Data: {:?}", s);
-                    //                    println!("Data: {:?}", to_string(&buf[0..(dw_read as usize)]));
+                    let mut out_buf = Vec::new();
+                    test.serialize(&mut Serializer::new(&mut out_buf)).expect("Failed to serialize");
 
-                    let mut vec: Vec<u8> = Vec::new();
-                   if let bson::Bson::Document(doc) = bson::to_bson(&tt2).expect("Failed to enocode bson") {
-//                       let mut bb = vec.
+                    println!("Arr: {:?}", out_buf);
 
-                       bson::encode_document(&mut vec, &doc).unwrap();
-                        WriteFile (h_pipe, &mut vec.as_ptr() as *mut _ as LPCVOID,
-                                   (vec.len()) as u32,
-                                   &mut dw_read,
-                                      null_mut());
-                   }
+
+                    WriteFile (h_pipe,
+                               out_buf.as_ptr() as LPCVOID,
+                               (out_buf.len()) as u32,
+                               &mut dw_read,
+                               null_mut());
+
 
                 }
             } else {
