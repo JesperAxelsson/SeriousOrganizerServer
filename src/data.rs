@@ -17,6 +17,7 @@ pub enum RequestType {
     ReloadStore = 5,
     ChangeSearchText = 6,
     DirCount = 7,
+    DirFileCount = 8,
 }
 
 
@@ -28,7 +29,7 @@ pub struct DirEntryResponse {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct FileEntry {
+pub struct FileEntryResponse {
     pub name: String,
     pub path: String,
     pub size: u64,
