@@ -1,15 +1,8 @@
-//use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
-pub struct Test {
-    pub id: String,
-    pub thing: i32,
-}
-
-#[derive(Serialize, Deserialize, Debug, PartialEq, )]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[repr(u8)]
 pub enum RequestType {
-    Test = 0,
     DirRequest = 1,
     FileRequest = 2,
     AddPath = 3,
@@ -18,19 +11,30 @@ pub enum RequestType {
     ChangeSearchText = 6,
     DirCount = 7,
     DirFileCount = 8,
+    DeletePath = 9,
 }
 
-
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Debug)]
 pub struct DirEntryResponse {
     pub name: String,
     pub path: String,
     pub size: u64,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Debug)]
 pub struct FileEntryResponse {
     pub name: String,
     pub path: String,
     pub size: u64,
+}
+
+#[derive(Deserialize, Debug)]
+pub enum Req {
+    DirCount,
+    DirRequest(u32),
+    FileRequest(u32, u32),
+    DirFileCount(u32),
+    ChangeSearchText(String),
+    Reload,
+    DeletePath(String),
 }

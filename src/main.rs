@@ -1,3 +1,4 @@
+#![deny(bare_trait_objects)]
 #![allow(unused_imports)]
 
 extern crate rmp_serde as rmps;
@@ -14,22 +15,22 @@ use time::PreciseTime;
 use std::ptr::{null, null_mut};
 //use std::time::{Duration, Instant};
 
+use winapi::shared::minwindef::{DWORD, FALSE, LPCVOID, LPVOID, TRUE};
+use winapi::shared::ntdef::HANDLE;
+use winapi::um::fileapi::{ReadFile, WriteFile};
+use winapi::um::handleapi::INVALID_HANDLE_VALUE;
 use winapi::um::namedpipeapi::{ConnectNamedPipe, CreateNamedPipeW, DisconnectNamedPipe};
 use winapi::um::winbase::{PIPE_ACCESS_DUPLEX, PIPE_READMODE_MESSAGE, PIPE_TYPE_MESSAGE};
-use winapi::um::handleapi::INVALID_HANDLE_VALUE;
-use winapi::shared::minwindef::{DWORD, FALSE, LPCVOID, LPVOID, TRUE};
-use winapi::um::fileapi::{ReadFile, WriteFile};
-use winapi::shared::ntdef::HANDLE;
 
 use serious_organizer_lib::{dir_search, lens};
 
-use serde::{Deserialize, Serialize};
 use rmps::{Deserializer, Serializer};
+use serde::{Deserialize, Serialize};
 
 mod data;
 mod wstring;
 
-use data::{RequestType, Test};
+use data::{Req, RequestType};
 use wstring::to_wstring;
 
 const BUFFER_SIZE: u32 = 1024;
@@ -64,7 +65,6 @@ fn main() {
     let mut lens = lens::Lens::new();
     update_lens(&mut lens);
 
-
     unsafe {
         let h_pipe = CreateNamedPipeW(
             pipe_name.as_ptr(),
@@ -91,16 +91,15 @@ fn main() {
                     &mut dw_read,
                     null_mut(),
                 ) != FALSE
-                    {
-                        let _start = PreciseTime::now();
+                {
+                    let _start = PreciseTime::now();
 
-                        let (offset, req) = parse_request(&buf);
-                        let _sent =
-                            handle_request(h_pipe, &buf[offset..(dw_read as usize)], req, &mut lens);
+                    let req = parse_request(&buf);
+                    let _sent = handle_request(h_pipe, req, &mut lens);
 
-                        let _end = PreciseTime::now();
-                        //                    println!("{} bytes took {:?} ms", sent, start.to(end).num_milliseconds());
-                    }
+                    let _end = PreciseTime::now();
+                    //                    println!("{} bytes took {:?} ms", sent, start.to(end).num_milliseconds());
+                }
             } else {
                 DisconnectNamedPipe(h_pipe);
             }
@@ -134,41 +133,37 @@ fn send_response(pipe_handle: HANDLE, buf: &[u8]) -> usize {
     dw_write as usize
 }
 
-pub enum Req {
-    DirCount,
-    DirRequest(u32),
-    FileRequest(u32, u32),
-    DirFileCount(u32),
-    ChangeSearchText,
-    Reload,
-    Test,
-}
-
-fn parse_request(buf: &[u8]) -> (usize, Req) {
+fn parse_request(buf: &[u8]) -> Req {
     use std::mem::transmute;
     //    println!("Parsing Request");
     let request_type = unsafe { transmute(buf[0]) };
-    match request_type {
-        RequestType::Test => (1, Req::Test),
-        RequestType::ReloadStore => (1, Req::Reload),
-        RequestType::DirCount => (1, Req::DirCount),
-        RequestType::DirRequest => (5, Req::DirRequest(get_u32(&buf[1..5]))),
-        RequestType::DirFileCount => (5, Req::DirFileCount(get_u32(&buf[1..5]))),
-        RequestType::FileRequest => (9, Req::FileRequest(get_u32(&buf[1..5]), get_u32(&buf[5..9]))),
-        RequestType::ChangeSearchText => (1, Req::ChangeSearchText),
-        _ => (0, Req::Test),
-    }
-}
+    let slice = &buf[1..];
+    let mut de = Deserializer::new(slice);
 
-fn get_u32(buf: &[u8]) -> u32 {
-    let mut tmp_buf: [u8; 4] = [0, 0, 0, 0];
-    if buf.len() != 4 {
-        panic!("Has to before is: {}", buf.len());
+    match request_type {
+        RequestType::ReloadStore => Req::Reload,
+        RequestType::DirCount => Req::DirCount,
+        RequestType::DirRequest => {
+            let n1 = Deserialize::deserialize(&mut de).expect("Failed to deserialize string");
+            Req::DirRequest(n1)
+        }
+
+        RequestType::DirFileCount =>  {
+            let n1 = Deserialize::deserialize(&mut de).expect("Failed to deserialize string");
+            Req::DirFileCount(n1)
+        },
+        RequestType::FileRequest => {
+            let n1 = Deserialize::deserialize(&mut de).expect("Failed to deserialize string");
+            let n2 = Deserialize::deserialize(&mut de).expect("Failed to deserialize string");
+            Req::FileRequest(n1, n2)
+        },
+        RequestType::ChangeSearchText => {
+            let new_string =
+                Deserialize::deserialize(&mut de).expect("Failed to deserialize string");
+            Req::ChangeSearchText(new_string)
+        }
+        _ => panic!("Unsupported request! {:?}", request_type),
     }
-    tmp_buf.copy_from_slice(buf);
-    let number = unsafe { std::mem::transmute::<[u8; 4], u32>(tmp_buf) };
-    //    (4, number)
-    number
 }
 
 fn from_u32(number: u32) -> [u8; 4] {
@@ -182,7 +177,7 @@ fn from_u32(number: u32) -> [u8; 4] {
     <tag><ix>
 */
 
-fn handle_request(pipe_handle: HANDLE, buf: &[u8], req: Req, mut lens: &mut lens::Lens) -> usize {
+fn handle_request(pipe_handle: HANDLE, req: Req, mut lens: &mut lens::Lens) -> usize {
     use data::*;
 
     //    println!("Handling Request");
@@ -193,7 +188,7 @@ fn handle_request(pipe_handle: HANDLE, buf: &[u8], req: Req, mut lens: &mut lens
             let mut out_buf = Vec::new();
 
             if let Some(dir) = lens.get_dir_entry(ix as usize) {
-//                let ref dir = lens.get_dir_entry(ix).expect("Ix_list index were invalid!");
+                //                let ref dir = lens.get_dir_entry(ix).expect("Ix_list index were invalid!");
                 let dir_response = DirEntryResponse {
                     name: dir.name.clone(),
                     path: dir.path.clone(),
@@ -214,7 +209,7 @@ fn handle_request(pipe_handle: HANDLE, buf: &[u8], req: Req, mut lens: &mut lens
             let mut out_buf = Vec::new();
 
             if let Some(file) = lens.get_file_entry(dir_ix as usize, file_ix as usize) {
-//                let ref dir = lens.get_dir_entry(ix).expect("Ix_list index were invalid!");
+                //                let ref dir = lens.get_dir_entry(ix).expect("Ix_list index were invalid!");
                 let file_response = FileEntryResponse {
                     name: file.name.clone(),
                     path: file.path.clone(),
@@ -229,10 +224,7 @@ fn handle_request(pipe_handle: HANDLE, buf: &[u8], req: Req, mut lens: &mut lens
                 send_response(pipe_handle, &out_buf)
             }
         }
-        Req::ChangeSearchText => {
-            let mut de = Deserializer::new(buf);
-            let new_search_text: String =
-                Deserialize::deserialize(&mut de).expect("Failed to deserialize ChangeSearchText");
+        Req::ChangeSearchText(new_search_text) => {
             lens.update_search_text(&new_search_text);
             send_response(pipe_handle, &from_u32(lens.ix_list.len() as u32))
         }
@@ -241,7 +233,10 @@ fn handle_request(pipe_handle: HANDLE, buf: &[u8], req: Req, mut lens: &mut lens
             send_response(pipe_handle, &from_u32(lens.get_dir_count() as u32))
         }
         Req::DirFileCount(ix) => {
-            let file_count = lens.get_file_count(ix as usize).expect(&format!("Invalid index {} during file count", ix)) as u32;
+            let file_count = lens
+                .get_file_count(ix as usize)
+                .expect(&format!("Invalid index {} during file count", ix))
+                as u32;
             println!("FileCount {}", file_count);
             send_response(pipe_handle, &from_u32(file_count))
         }
@@ -251,23 +246,15 @@ fn handle_request(pipe_handle: HANDLE, buf: &[u8], req: Req, mut lens: &mut lens
             out_buf.push(0);
             send_response(pipe_handle, &out_buf)
         }
-        Req::Test => {
-            let mut de = Deserializer::new(buf);
-            let test: Test = Deserialize::deserialize(&mut de).expect("Failed to deserialize Test");
-            let mut out_buf = Vec::new();
-            test.serialize(&mut Serializer::new(&mut out_buf))
-                .expect("Failed to serialize Test");
-            println!("Data: {:?}", test);
-            send_response(pipe_handle, &out_buf)
-        }
+        Req::DeletePath(_path) => 0,
     }
 }
 
 fn update_lens(lens: &mut lens::Lens) {
-    let mut paths = vec![String::from("C:\\home\\bin\\SysInternal")];
+    let mut paths = Vec::new();
     paths.push(String::from("C:\\temp"));
-    paths.push(String::from("D:\\temp"));
-    paths.push(String::from("I:\\temp"));
+    //    paths.push(String::from("J:\\temp"));
+    //    paths.push(String::from("I:\\temp"));
 
     let mut dir_s = dir_search::get_all_data(paths);
 

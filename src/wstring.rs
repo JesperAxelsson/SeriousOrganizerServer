@@ -1,8 +1,8 @@
 #![allow(dead_code)]
 
 use std::ffi::OsStr;
-use std::os::windows::ffi::OsStrExt;
 use std::iter::once;
+use std::os::windows::ffi::OsStrExt;
 
 pub fn to_wstring(str: &str) -> Vec<u16> {
     let mut wide: Vec<u16> = OsStr::new(str).encode_wide().chain(once(0)).collect();
