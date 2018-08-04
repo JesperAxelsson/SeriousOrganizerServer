@@ -154,7 +154,7 @@ fn parse_request(buf: &[u8]) -> Request {
         },
         RequestType::FileRequest => {
             let n1 = Deserialize::deserialize(&mut de).expect("Failed to deserialize FileRequest");
-            let n2 = Deserialize::deserialize(&mut de).expect("Failed to deserialize string");
+            let n2 = Deserialize::deserialize(&mut de).expect("Failed to deserialize FileRequest");
             Request::FileRequest(n1, n2)
         },
         RequestType::ChangeSearchText => {
