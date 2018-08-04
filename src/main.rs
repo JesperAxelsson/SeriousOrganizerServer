@@ -30,7 +30,7 @@ use serde::{Deserialize, Serialize};
 mod data;
 mod wstring;
 
-use data::{Req, RequestType};
+use data::{Request, RequestType};
 use wstring::to_wstring;
 
 const BUFFER_SIZE: u32 = 1024;
@@ -133,7 +133,7 @@ fn send_response(pipe_handle: HANDLE, buf: &[u8]) -> usize {
     dw_write as usize
 }
 
-fn parse_request(buf: &[u8]) -> Req {
+fn parse_request(buf: &[u8]) -> Request {
     use std::mem::transmute;
     //    println!("Parsing Request");
     let request_type = unsafe { transmute(buf[0]) };
@@ -141,26 +141,26 @@ fn parse_request(buf: &[u8]) -> Req {
     let mut de = Deserializer::new(slice);
 
     match request_type {
-        RequestType::ReloadStore => Req::Reload,
-        RequestType::DirCount => Req::DirCount,
+        RequestType::ReloadStore => Request::Reload,
+        RequestType::DirCount => Request::DirCount,
         RequestType::DirRequest => {
-            let n1 = Deserialize::deserialize(&mut de).expect("Failed to deserialize string");
-            Req::DirRequest(n1)
+            let n1 = Deserialize::deserialize(&mut de).expect("Failed to deserialize DirRequest");
+            Request::DirRequest(n1)
         }
 
         RequestType::DirFileCount =>  {
-            let n1 = Deserialize::deserialize(&mut de).expect("Failed to deserialize string");
-            Req::DirFileCount(n1)
+            let n1 = Deserialize::deserialize(&mut de).expect("Failed to deserialize DirFileCount");
+            Request::DirFileCount(n1)
         },
         RequestType::FileRequest => {
-            let n1 = Deserialize::deserialize(&mut de).expect("Failed to deserialize string");
+            let n1 = Deserialize::deserialize(&mut de).expect("Failed to deserialize FileRequest");
             let n2 = Deserialize::deserialize(&mut de).expect("Failed to deserialize string");
-            Req::FileRequest(n1, n2)
+            Request::FileRequest(n1, n2)
         },
         RequestType::ChangeSearchText => {
             let new_string =
-                Deserialize::deserialize(&mut de).expect("Failed to deserialize string");
-            Req::ChangeSearchText(new_string)
+                Deserialize::deserialize(&mut de).expect("Failed to deserialize ChangeSearchText");
+            Request::ChangeSearchText(new_string)
         }
         _ => panic!("Unsupported request! {:?}", request_type),
     }
@@ -177,13 +177,13 @@ fn from_u32(number: u32) -> [u8; 4] {
     <tag><ix>
 */
 
-fn handle_request(pipe_handle: HANDLE, req: Req, mut lens: &mut lens::Lens) -> usize {
+fn handle_request(pipe_handle: HANDLE, req: Request, mut lens: &mut lens::Lens) -> usize {
     use data::*;
 
     //    println!("Handling Request");
 
     match req {
-        Req::DirRequest(ix) => {
+        Request::DirRequest(ix) => {
             //            println!("DirRequest: {:?}", ix);
             let mut out_buf = Vec::new();
 
@@ -203,7 +203,7 @@ fn handle_request(pipe_handle: HANDLE, req: Req, mut lens: &mut lens::Lens) -> u
                 send_response(pipe_handle, &out_buf)
             }
         }
-        Req::FileRequest(dir_ix, file_ix) => {
+        Request::FileRequest(dir_ix, file_ix) => {
             //            println!("DirRequest: {:?}", ix);
             println!("FileRequest dir: {} file: {}", dir_ix, file_ix);
             let mut out_buf = Vec::new();
@@ -224,15 +224,15 @@ fn handle_request(pipe_handle: HANDLE, req: Req, mut lens: &mut lens::Lens) -> u
                 send_response(pipe_handle, &out_buf)
             }
         }
-        Req::ChangeSearchText(new_search_text) => {
+        Request::ChangeSearchText(new_search_text) => {
             lens.update_search_text(&new_search_text);
             send_response(pipe_handle, &from_u32(lens.ix_list.len() as u32))
         }
-        Req::DirCount => {
+        Request::DirCount => {
             println!("DirCount {}", lens.get_dir_count() as u32);
             send_response(pipe_handle, &from_u32(lens.get_dir_count() as u32))
         }
-        Req::DirFileCount(ix) => {
+        Request::DirFileCount(ix) => {
             let file_count = lens
                 .get_file_count(ix as usize)
                 .expect(&format!("Invalid index {} during file count", ix))
@@ -240,13 +240,13 @@ fn handle_request(pipe_handle: HANDLE, req: Req, mut lens: &mut lens::Lens) -> u
             println!("FileCount {}", file_count);
             send_response(pipe_handle, &from_u32(file_count))
         }
-        Req::Reload => {
+        Request::Reload => {
             update_lens(&mut lens);
             let mut out_buf = Vec::new();
             out_buf.push(0);
             send_response(pipe_handle, &out_buf)
         }
-        Req::DeletePath(_path) => 0,
+        Request::DeletePath(_path) => 0,
     }
 }
 

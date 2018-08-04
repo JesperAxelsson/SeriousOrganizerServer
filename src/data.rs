@@ -29,7 +29,7 @@ pub struct FileEntryResponse {
 }
 
 #[derive(Deserialize, Debug)]
-pub enum Req {
+pub enum Request {
     DirCount,
     DirRequest(u32),
     FileRequest(u32, u32),
