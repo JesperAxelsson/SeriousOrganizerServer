@@ -22,7 +22,7 @@ use winapi::um::handleapi::INVALID_HANDLE_VALUE;
 use winapi::um::namedpipeapi::{ConnectNamedPipe, CreateNamedPipeW, DisconnectNamedPipe};
 use winapi::um::winbase::{PIPE_ACCESS_DUPLEX, PIPE_READMODE_MESSAGE, PIPE_TYPE_MESSAGE};
 
-use serious_organizer_lib::{dir_search, lens};
+use serious_organizer_lib::{dir_search, lens, store};
 
 use rmps::{Deserializer, Serializer};
 use serde::{Deserialize, Serialize};
@@ -37,6 +37,16 @@ const BUFFER_SIZE: u32 = 1024;
 
 fn main() {
     println!("Hello, world!");
+
+    let mut store = store::Store::init();
+    store.establish_connection();
+//    store.test_db();
+    store.load_from_store();
+
+    let mut dirs = dir_search::list_files_in_dir("C:\\temp");
+//    println!("Dirs: {:?}", dirs);
+
+    store.update(dirs);
 
     //    let mut test = Test {
     ////        id: String::from("Hello"),
