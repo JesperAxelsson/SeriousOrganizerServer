@@ -40,13 +40,14 @@ fn main() {
 
     let mut store = store::Store::init();
     store.establish_connection();
-//    store.test_db();
+    //    store.test_db();
     store.load_from_store();
 
-    let mut dirs = dir_search::list_files_in_dir("C:\\temp");
-//    println!("Dirs: {:?}", dirs);
+    let  dirs = dir_search::list_files_in_dir("c:\\temp");
+    //    let mut dirs = dir_search::list_files_in_dir("i:\\temp");
+    //    println!("Dirs: {:?}", dirs);
 
-    store.update(dirs);
+    store.update(&dirs);
 
     //    let mut test = Test {
     ////        id: String::from("Hello"),
@@ -158,15 +159,15 @@ fn parse_request(buf: &[u8]) -> Request {
             Request::DirRequest(n1)
         }
 
-        RequestType::DirFileCount =>  {
+        RequestType::DirFileCount => {
             let n1 = Deserialize::deserialize(&mut de).expect("Failed to deserialize DirFileCount");
             Request::DirFileCount(n1)
-        },
+        }
         RequestType::FileRequest => {
             let n1 = Deserialize::deserialize(&mut de).expect("Failed to deserialize FileRequest");
             let n2 = Deserialize::deserialize(&mut de).expect("Failed to deserialize FileRequest");
             Request::FileRequest(n1, n2)
-        },
+        }
         RequestType::ChangeSearchText => {
             let new_string =
                 Deserialize::deserialize(&mut de).expect("Failed to deserialize ChangeSearchText");
@@ -202,7 +203,7 @@ fn handle_request(pipe_handle: HANDLE, req: Request, mut lens: &mut lens::Lens) 
                 let dir_response = DirEntryResponse {
                     name: dir.name.clone(),
                     path: dir.path.clone(),
-                    size: dir.size,
+                    size: dir.size as u64,
                 };
                 dir_response
                     .serialize(&mut Serializer::new(&mut out_buf))
@@ -223,7 +224,7 @@ fn handle_request(pipe_handle: HANDLE, req: Request, mut lens: &mut lens::Lens) 
                 let file_response = FileEntryResponse {
                     name: file.name.clone(),
                     path: file.path.clone(),
-                    size: file.size,
+                    size: file.size as u64,
                 };
                 file_response
                     .serialize(&mut Serializer::new(&mut out_buf))
