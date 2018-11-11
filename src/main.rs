@@ -177,47 +177,8 @@ fn handle_request(pipe_handle: HANDLE, req: Request, mut lens: &mut lens::Lens) 
     //    println!("Handling Request");
 
     match req {
-        Request::DirRequest(ix) => {
-            //            println!("DirRequest: {:?}", ix);
-            let mut out_buf = Vec::new();
-
-            if let Some(dir) = lens.get_dir_entry(ix as usize) {
-                //                let ref dir = lens.get_dir_entry(ix).expect("Ix_list index were invalid!");
-                let dir_response = DirEntryResponse {
-                    name: dir.name.clone(),
-                    path: dir.path.clone(),
-                    size: dir.size as u64,
-                };
-                dir_response
-                    .serialize(&mut Serializer::new(&mut out_buf))
-                    .expect("Failed to serialize DirRequest");
-                send_response(pipe_handle, &out_buf)
-            } else {
-                out_buf.push(0xc0);
-                send_response(pipe_handle, &out_buf)
-            }
-        }
-        Request::FileRequest(dir_ix, file_ix) => {
-            //            println!("DirRequest: {:?}", ix);
-            println!("FileRequest dir: {} file: {}", dir_ix, file_ix);
-            let mut out_buf = Vec::new();
-
-            if let Some(file) = lens.get_file_entry(dir_ix as usize, file_ix as usize) {
-                //                let ref dir = lens.get_dir_entry(ix).expect("Ix_list index were invalid!");
-                let file_response = FileEntryResponse {
-                    name: file.name.clone(),
-                    path: file.path.clone(),
-                    size: file.size as u64,
-                };
-                file_response
-                    .serialize(&mut Serializer::new(&mut out_buf))
-                    .expect("Failed to serialize FileRequest");
-                send_response(pipe_handle, &out_buf)
-            } else {
-                out_buf.push(0xc0);
-                send_response(pipe_handle, &out_buf)
-            }
-        }
+        Request::DirRequest(ix) => handle_dir_request(pipe_handle, &lens, ix),
+        Request::FileRequest(dir_ix, file_ix) => handle_file_request(pipe_handle, &lens, dir_ix, file_ix),
         Request::ChangeSearchText(new_search_text) => {
             lens.update_search_text(&new_search_text);
             send_response(pipe_handle, &from_u32(lens.ix_list.len() as u32))
@@ -241,8 +202,59 @@ fn handle_request(pipe_handle: HANDLE, req: Request, mut lens: &mut lens::Lens) 
             send_response(pipe_handle, &out_buf)
         }
         Request::DeletePath(_path) => 0,
+        Request::Sort(col, order) => {
+            println!("SortRequest: {:?} {:?}", col, order);
+            lens.order_by(col, order);
+            let r: u32 = 1;
+            send_response(pipe_handle, &from_u32(r))
+        }
     }
 }
+
+
+fn handle_dir_request(pipe_handle: HANDLE, lens: &lens::Lens, ix: u32) -> usize {
+    use data::*;
+
+    let mut out_buf = Vec::new();
+
+    if let Some(dir) = lens.get_dir_entry(ix as usize) {
+        let dir_response = DirEntryResponse {
+            name: dir.name.clone(),
+            path: dir.path.clone(),
+            size: dir.size as u64,
+        };
+        dir_response
+            .serialize(&mut Serializer::new(&mut out_buf))
+            .expect("Failed to serialize DirRequest");
+        send_response(pipe_handle, &out_buf)
+    } else {
+        out_buf.push(0xc0);
+        send_response(pipe_handle, &out_buf)
+    }
+}
+
+
+fn handle_file_request(pipe_handle: HANDLE, lens: &lens::Lens, dir_ix: u32, file_ix: u32) -> usize {
+    use data::*;
+    println!("FileRequest dir: {} file: {}", dir_ix, file_ix);
+    let mut out_buf = Vec::new();
+
+    if let Some(file) = lens.get_file_entry(dir_ix as usize, file_ix as usize) {
+        let file_response = FileEntryResponse {
+            name: file.name.clone(),
+            path: file.path.clone(),
+            size: file.size as u64,
+        };
+        file_response
+            .serialize(&mut Serializer::new(&mut out_buf))
+            .expect("Failed to serialize FileRequest");
+        send_response(pipe_handle, &out_buf)
+    } else {
+        out_buf.push(0xc0);
+        send_response(pipe_handle, &out_buf)
+    }
+}
+
 
 fn update_lens(lens: &mut lens::Lens) {
     let mut paths = Vec::new();
