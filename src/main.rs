@@ -23,6 +23,7 @@ use winapi::um::namedpipeapi::{ConnectNamedPipe, CreateNamedPipeW, DisconnectNam
 use winapi::um::winbase::{PIPE_ACCESS_DUPLEX, PIPE_READMODE_MESSAGE, PIPE_TYPE_MESSAGE};
 
 use serious_organizer_lib::{dir_search, lens, store};
+use serious_organizer_lib::lens::{ SortColumn, SortOrder};
 
 use rmps::{Deserializer, Serializer};
 use serde::{Deserialize, Serialize};
@@ -38,16 +39,16 @@ const BUFFER_SIZE: u32 = 1024;
 fn main() {
     println!("Hello, world!");
 
-    let mut store = store::Store::init();
-    store.establish_connection();
+//    let mut store = store::Store::init();
+//    store.establish_connection();
     //    store.test_db();
-    store.load_from_store();
-
-    let  dirs = dir_search::list_files_in_dir("c:\\temp");
-    //    let mut dirs = dir_search::list_files_in_dir("i:\\temp");
-    //    println!("Dirs: {:?}", dirs);
-
-    store.update(&dirs);
+//    store.load_from_store();
+//
+//    let  dirs = dir_search::list_files_in_dir("c:\\temp\\test");
+//    //    let mut dirs = dir_search::list_files_in_dir("i:\\temp");
+//    //    println!("Dirs: {:?}", dirs);
+//
+//    store.update(&dirs);
 
     //    let mut test = Test {
     ////        id: String::from("Hello"),
@@ -270,4 +271,5 @@ fn update_lens(lens: &mut lens::Lens) {
     let mut dir_s = dir_search::get_all_data(paths);
 
     lens.update_data(&mut dir_s);
+    lens.order_by( SortColumn::Size, SortOrder::Desc);
 }
