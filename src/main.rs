@@ -9,6 +9,8 @@ extern crate serious_organizer_lib;
 extern crate time;
 #[cfg(windows)]
 extern crate winapi;
+extern crate byteorder;
+extern crate num;
 
 use time::PreciseTime;
 
@@ -23,7 +25,7 @@ use winapi::um::namedpipeapi::{ConnectNamedPipe, CreateNamedPipeW, DisconnectNam
 use winapi::um::winbase::{PIPE_ACCESS_DUPLEX, PIPE_READMODE_MESSAGE, PIPE_TYPE_MESSAGE};
 
 use serious_organizer_lib::{dir_search, lens, store};
-use serious_organizer_lib::lens::{ SortColumn, SortOrder};
+use serious_organizer_lib::lens::{SortColumn, SortOrder};
 
 use rmps::{Deserializer, Serializer};
 use serde::{Deserialize, Serialize};
@@ -38,40 +40,6 @@ const BUFFER_SIZE: u32 = 1024;
 
 fn main() {
     println!("Hello, world!");
-
-//    let mut store = store::Store::init();
-//    store.establish_connection();
-    //    store.test_db();
-//    store.load_from_store();
-//
-//    let  dirs = dir_search::list_files_in_dir("c:\\temp\\test");
-//    //    let mut dirs = dir_search::list_files_in_dir("i:\\temp");
-//    //    println!("Dirs: {:?}", dirs);
-//
-//    store.update(&dirs);
-
-    //    let mut test = Test {
-    ////        id: String::from("Hello"),
-    ////        thing: 21,
-    ////    };
-    ////
-    ////    let start = PreciseTime::now();
-    ////
-    ////    let mut out_buf = Vec::new();
-    ////    let mut i = 0;
-    ////    while i < 1_000_000 {
-    ////
-    ////        test.serialize(&mut Serializer::new(&mut out_buf)).expect("Failed to serialize");
-    ////
-    ////        let mut de = Deserializer::new(&out_buf[0..out_buf.len()]);
-    ////        test = Deserialize::deserialize(&mut de).expect("Failed to deserialize");
-    ////
-    ////
-    ////        i = i+1;
-    ////    }
-    ////    let end = PreciseTime::now();
-    ////
-    ////    println!("Took: {:?} ms", start.to(end).num_milliseconds());
 
     let pipe_name = to_wstring("\\\\.\\pipe\\dude");
     let mut lens = lens::Lens::new();
@@ -103,15 +71,15 @@ fn main() {
                     &mut dw_read,
                     null_mut(),
                 ) != FALSE
-                {
-                    let _start = PreciseTime::now();
+                    {
+                        let _start = PreciseTime::now();
 
-                    let req = parse_request(&buf);
-                    let _sent = handle_request(h_pipe, req, &mut lens);
+                        let req = parse_request(&buf);
+                        let _sent = handle_request(h_pipe, req, &mut lens);
 
-                    let _end = PreciseTime::now();
-                    //                    println!("{} bytes took {:?} ms", sent, start.to(end).num_milliseconds());
-                }
+                        let _end = PreciseTime::now();
+                        //                    println!("{} bytes took {:?} ms", sent, start.to(end).num_milliseconds());
+                    }
             } else {
                 DisconnectNamedPipe(h_pipe);
             }
@@ -146,33 +114,47 @@ fn send_response(pipe_handle: HANDLE, buf: &[u8]) -> usize {
 }
 
 fn parse_request(buf: &[u8]) -> Request {
+    use std::io::Cursor;
     use std::mem::transmute;
-    //    println!("Parsing Request");
+    use byteorder::{ReadBytesExt, LittleEndian};
+
+//    println!("Parsing Request");
+
     let request_type = unsafe { transmute(buf[0]) };
     let slice = &buf[1..];
-    let mut de = Deserializer::new(slice);
+
+    let mut rdr = Cursor::new(slice);
 
     match request_type {
         RequestType::ReloadStore => Request::Reload,
         RequestType::DirCount => Request::DirCount,
         RequestType::DirRequest => {
-            let n1 = Deserialize::deserialize(&mut de).expect("Failed to deserialize DirRequest");
+            let n1 = rdr.read_u32::<LittleEndian>().expect("Failed to deserialize DirRequest");
             Request::DirRequest(n1)
         }
 
         RequestType::DirFileCount => {
-            let n1 = Deserialize::deserialize(&mut de).expect("Failed to deserialize DirFileCount");
+            let n1 = rdr.read_u32::<LittleEndian>().expect("Failed to deserialize DirFileCount");
             Request::DirFileCount(n1)
         }
         RequestType::FileRequest => {
-            let n1 = Deserialize::deserialize(&mut de).expect("Failed to deserialize FileRequest");
-            let n2 = Deserialize::deserialize(&mut de).expect("Failed to deserialize FileRequest");
+            let n1 = rdr.read_u32::<LittleEndian>().expect("Failed to deserialize FileRequest start");
+            let n2 = rdr.read_u32::<LittleEndian>().expect("Failed to deserialize FileRequest end");
             Request::FileRequest(n1, n2)
         }
         RequestType::ChangeSearchText => {
+            let mut de = Deserializer::new(slice);
             let new_string =
                 Deserialize::deserialize(&mut de).expect("Failed to deserialize ChangeSearchText");
             Request::ChangeSearchText(new_string)
+        }
+        RequestType::Sort => {
+            let sort_column: u32 = rdr.read_u32::<LittleEndian>().expect("Failed to deserialize sort_column");
+            let sort_order: u32 = rdr.read_u32::<LittleEndian>().expect("Failed to deserialize sort_order");
+
+            Request::Sort(
+                num::FromPrimitive::from_u32(sort_column).expect("Failed to parse sort_column"),
+                num::FromPrimitive::from_u32(sort_order).expect("Failed to parse sort_order"))
         }
         _ => panic!("Unsupported request! {:?}", request_type),
     }
@@ -271,5 +253,5 @@ fn update_lens(lens: &mut lens::Lens) {
     let mut dir_s = dir_search::get_all_data(paths);
 
     lens.update_data(&mut dir_s);
-    lens.order_by( SortColumn::Size, SortOrder::Desc);
+//    lens.order_by( SortColumn::Size, SortOrder::Desc);
 }

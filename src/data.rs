@@ -1,3 +1,4 @@
+use serious_organizer_lib::lens::{SortColumn, SortOrder};
 use serde::{Deserialize, Deserializer, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
@@ -12,6 +13,7 @@ pub enum RequestType {
     DirCount = 7,
     DirFileCount = 8,
     DeletePath = 9,
+    Sort = 10,
 }
 
 #[derive(Serialize, Debug)]
@@ -28,7 +30,7 @@ pub struct FileEntryResponse {
     pub size: u64,
 }
 
-#[derive(Deserialize, Debug)]
+#[derive(Debug)]
 pub enum Request {
     DirCount,
     DirRequest(u32),
@@ -37,4 +39,5 @@ pub enum Request {
     ChangeSearchText(String),
     Reload,
     DeletePath(String),
+    Sort(SortColumn, SortOrder),
 }

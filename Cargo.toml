@@ -10,6 +10,9 @@ rmp-serde = "0.13.7"
 serde = "1.0.80"
 serde_derive = "1.0.80"
 time = "0.1.40"
+num = "0.2"
+num-traits = "0.2"
+byteorder = "1"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3.6", features = ["winuser", "ntdef", "namedpipeapi", "minwinbase", "minwindef", "winbase", "handleapi", "fileapi" ] }
