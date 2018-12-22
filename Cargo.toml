@@ -2,6 +2,7 @@
 name = "serious_organizer_server"
 version = "0.1.1"
 authors = ["Jesper Axelsson <jesperaxe@gmail.com>"]
+edition = "2018"
 
 [dependencies]
 #serious_organizer_lib = { git = "https://github.com/JesperAxelsson/SeriousOrganizerLib" }
