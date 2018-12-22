@@ -30,11 +30,12 @@ use serious_organizer_lib::lens::{SortColumn, SortOrder};
 use rmps::{Deserializer, Serializer};
 use serde::{Deserialize, Serialize};
 
-mod data;
-mod wstring;
+pub mod data;
+pub mod wstring;
 
-use data::{Request, RequestType};
-use wstring::to_wstring;
+
+use crate::data::{Request, RequestType, FileEntryResponse, DirEntryResponse};
+use crate::wstring::to_wstring;
 
 const BUFFER_SIZE: u32 = 1024;
 
@@ -172,8 +173,6 @@ fn from_u32(number: u32) -> [u8; 4] {
 */
 
 fn handle_request(pipe_handle: HANDLE, req: Request, mut lens: &mut lens::Lens) -> usize {
-    use data::*;
-
     //    println!("Handling Request");
 
     match req {
@@ -213,7 +212,6 @@ fn handle_request(pipe_handle: HANDLE, req: Request, mut lens: &mut lens::Lens) 
 
 
 fn handle_dir_request(pipe_handle: HANDLE, lens: &lens::Lens, ix: u32) -> usize {
-    use data::*;
 
     let mut out_buf = Vec::new();
 
@@ -235,7 +233,6 @@ fn handle_dir_request(pipe_handle: HANDLE, lens: &lens::Lens, ix: u32) -> usize 
 
 
 fn handle_file_request(pipe_handle: HANDLE, lens: &lens::Lens, dir_ix: u32, file_ix: u32) -> usize {
-    use data::*;
     println!("FileRequest dir: {} file: {}", dir_ix, file_ix);
     let mut out_buf = Vec::new();
 

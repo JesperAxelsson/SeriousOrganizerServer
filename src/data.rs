@@ -1,6 +1,7 @@
 use serious_organizer_lib::lens::{SortColumn, SortOrder};
 use serde::{Deserialize, Deserializer, Serialize};
 
+
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 #[repr(u8)]
 pub enum RequestType {
