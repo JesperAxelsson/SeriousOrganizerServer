@@ -15,7 +15,26 @@ pub enum RequestType {
     DirFileCount = 8,
     DeletePath = 9,
     Sort = 10,
+    LabelAdd = 11,
+    LabelRemove = 12,
+    LabelsGet = 13,
 }
+
+#[derive(Debug)]
+pub enum Request {
+    DirCount,
+    DirRequest(u32),
+    FileRequest(u32, u32),
+    DirFileCount(u32),
+    ChangeSearchText(String),
+    Reload,
+    DeletePath(String),
+    Sort(SortColumn, SortOrder),
+    LabelAdd(String),
+    LabelRemove(u32),
+    LabelsGet,
+}
+
 
 #[derive(Serialize, Debug)]
 pub struct DirEntryResponse {
@@ -29,16 +48,4 @@ pub struct FileEntryResponse {
     pub name: String,
     pub path: String,
     pub size: u64,
-}
-
-#[derive(Debug)]
-pub enum Request {
-    DirCount,
-    DirRequest(u32),
-    FileRequest(u32, u32),
-    DirFileCount(u32),
-    ChangeSearchText(String),
-    Reload,
-    DeletePath(String),
-    Sort(SortColumn, SortOrder),
 }

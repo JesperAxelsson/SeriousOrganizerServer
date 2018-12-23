@@ -34,7 +34,7 @@ pub mod data;
 pub mod wstring;
 
 
-use crate::data::{Request, RequestType, FileEntryResponse, DirEntryResponse};
+use crate::data::*;
 use crate::wstring::to_wstring;
 
 const BUFFER_SIZE: u32 = 1024;
@@ -128,6 +128,7 @@ fn parse_request(buf: &[u8]) -> Request {
 
     match request_type {
         RequestType::ReloadStore => Request::Reload,
+
         RequestType::DirCount => Request::DirCount,
         RequestType::DirRequest => {
             let n1 = rdr.read_u32::<LittleEndian>().expect("Failed to deserialize DirRequest");
@@ -143,12 +144,14 @@ fn parse_request(buf: &[u8]) -> Request {
             let n2 = rdr.read_u32::<LittleEndian>().expect("Failed to deserialize FileRequest end");
             Request::FileRequest(n1, n2)
         }
+
         RequestType::ChangeSearchText => {
             let mut de = Deserializer::new(slice);
             let new_string =
                 Deserialize::deserialize(&mut de).expect("Failed to deserialize ChangeSearchText");
             Request::ChangeSearchText(new_string)
         }
+
         RequestType::Sort => {
             let sort_column: u32 = rdr.read_u32::<LittleEndian>().expect("Failed to deserialize sort_column");
             let sort_order: u32 = rdr.read_u32::<LittleEndian>().expect("Failed to deserialize sort_order");
@@ -156,6 +159,20 @@ fn parse_request(buf: &[u8]) -> Request {
             Request::Sort(
                 num::FromPrimitive::from_u32(sort_column).expect("Failed to parse sort_column"),
                 num::FromPrimitive::from_u32(sort_order).expect("Failed to parse sort_order"))
+        }
+
+        RequestType::LabelAdd => {
+            let mut de = Deserializer::new(slice);
+            let new_string =
+                Deserialize::deserialize(&mut de).expect("Failed to deserialize LabelAdd");
+            Request::LabelAdd(new_string)
+        }
+        RequestType::LabelRemove => {
+            let n1 = rdr.read_u32::<LittleEndian>().expect("Failed to deserialize LabelRemove");
+            Request::LabelRemove(n1)
+        }
+        RequestType::LabelsGet => {
+            Request::LabelsGet
         }
         _ => panic!("Unsupported request! {:?}", request_type),
     }
@@ -207,12 +224,26 @@ fn handle_request(pipe_handle: HANDLE, req: Request, mut lens: &mut lens::Lens) 
             let r: u32 = 1;
             send_response(pipe_handle, &from_u32(r))
         }
+
+        Request::LabelAdd(name) => {
+            println!("LabelAdd: {:?}", name);
+            lens.add_label(&name);
+            send_response(pipe_handle, &from_u32(0))
+        }
+        Request::LabelRemove(id) => {
+            println!("LabelRemove: {:?}", id);
+            lens.remove_label(id);
+            send_response(pipe_handle, &from_u32(0))
+        }
+        Request::LabelsGet => {
+            println!("LabelsGet");
+            handle_labels_request(pipe_handle, &lens)
+        }
     }
 }
 
 
 fn handle_dir_request(pipe_handle: HANDLE, lens: &lens::Lens, ix: u32) -> usize {
-
     let mut out_buf = Vec::new();
 
     if let Some(dir) = lens.get_dir_entry(ix as usize) {
@@ -250,6 +281,15 @@ fn handle_file_request(pipe_handle: HANDLE, lens: &lens::Lens, dir_ix: u32, file
         out_buf.push(0xc0);
         send_response(pipe_handle, &out_buf)
     }
+}
+
+
+fn handle_labels_request(pipe_handle: HANDLE, lens: &lens::Lens) -> usize {
+    let mut out_buf = Vec::new();
+    lens.get_labels().serialize(&mut Serializer::new(&mut out_buf))
+        .expect("Failed to serialize DirRequest");
+    println!("handle_labels_request bytes: {:?}", out_buf.len());
+    send_response(pipe_handle, &out_buf)
 }
 
 
