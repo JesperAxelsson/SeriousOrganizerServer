@@ -296,6 +296,7 @@ fn handle_labels_request(pipe_handle: HANDLE, lens: &lens::Lens) -> usize {
 fn update_lens(lens: &mut lens::Lens) {
     let mut paths = Vec::new();
     paths.push(String::from("C:\\temp"));
+    paths.push(String::from("D:\\temp"));
     //    paths.push(String::from("J:\\temp"));
     //    paths.push(String::from("I:\\temp"));
 

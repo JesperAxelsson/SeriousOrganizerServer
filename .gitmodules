@@ -1,0 +1,3 @@
+[submodule "SeriousOrganizerLib"]
+	path = SeriousOrganizerLib
+	url = https://github.com/JesperAxelsson/SeriousOrganizerLib.git
