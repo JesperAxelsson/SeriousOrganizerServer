@@ -9,12 +9,12 @@ edition = "2018"
 #serious_organizer_lib = { path = "C:/home/jesper/rust/SeriousOrganizerLib" }
 serious_organizer_lib = { path = "./SeriousOrganizerLib" }
 rmp-serde = "0.13.7"
-serde = "1.0.84"
-serde_derive = "1.0.84"
-time = "0.1.41"
+serde = "1.0.87"
+serde_derive = "1.0.87"
+time = "0.1.42"
 num = "0.2.0"
 num-traits = "0.2.6"
-byteorder = "1.2.7"
+byteorder = "1.3.1"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3.6", features = ["winuser", "ntdef", "namedpipeapi", "minwinbase", "minwindef", "winbase", "handleapi", "fileapi" ] }
