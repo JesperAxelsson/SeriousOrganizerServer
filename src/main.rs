@@ -174,6 +174,10 @@ fn parse_request(buf: &[u8]) -> Request {
         RequestType::LabelsGet => {
             Request::LabelsGet
         }
+        RequestType::LabelsForDir => {
+            let n1 = rdr.read_u32::<LittleEndian>().expect("Failed to deserialize LabelsForDir");
+            Request::LabelsForDir(n1)
+        }
         _ => panic!("Unsupported request! {:?}", request_type),
     }
 }
@@ -239,6 +243,11 @@ fn handle_request(pipe_handle: HANDLE, req: Request, mut lens: &mut lens::Lens) 
             println!("LabelsGet");
             handle_labels_request(pipe_handle, &lens)
         }
+
+        Request::LabelsForDir(entry_id) => {
+            println!("LabelsGet");
+            handle_labels_for_entry_request(pipe_handle,entry_id, &lens)
+        }
     }
 }
 
@@ -291,7 +300,15 @@ fn handle_file_request(pipe_handle: HANDLE, lens: &lens::Lens, dir_ix: u32, file
 fn handle_labels_request(pipe_handle: HANDLE, lens: &lens::Lens) -> usize {
     let mut out_buf = Vec::new();
     lens.get_labels().serialize(&mut Serializer::new(&mut out_buf))
-        .expect("Failed to serialize DirRequest");
+        .expect("Failed to serialize labels request");
+    println!("handle_labels_request bytes: {:?}", out_buf.len());
+    send_response(pipe_handle, &out_buf)
+}
+
+fn handle_labels_for_entry_request(pipe_handle: HANDLE, entry_id: u32, lens: &lens::Lens) -> usize {
+    let mut out_buf = Vec::new();
+    lens.entry_labels(entry_id).serialize(&mut Serializer::new(&mut out_buf))
+        .expect("Failed to serialize label for entries");
     println!("handle_labels_request bytes: {:?}", out_buf.len());
     send_response(pipe_handle, &out_buf)
 }
@@ -299,10 +316,10 @@ fn handle_labels_request(pipe_handle: HANDLE, lens: &lens::Lens) -> usize {
 
 fn update_lens(lens: &mut lens::Lens) {
     let mut paths = Vec::new();
-    paths.push(String::from("C:\\temp"));
+    paths.push(String::from("C:\\temp\\2test"));
     paths.push(String::from("D:\\temp"));
     //    paths.push(String::from("J:\\temp"));
-    //    paths.push(String::from("I:\\temp"));
+    paths.push(String::from("I:\\temp"));
 
     let mut dir_s = dir_search::get_all_data(paths);
 
