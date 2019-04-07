@@ -19,6 +19,7 @@ pub enum RequestType {
     LabelRemove = 12,
     LabelsGet = 13,
     GetDirLabels = 14,
+    AddDirLabels = 15,
 }
 
 #[derive(Debug)]
@@ -34,7 +35,8 @@ pub enum Request {
     LabelAdd(String),
     LabelRemove(u32),
     LabelsGet,
-    DirLabels(u32),
+    GetDirLabels(u32),
+    AddDirLabels(u32, Vec<u32>)
 }
 
 

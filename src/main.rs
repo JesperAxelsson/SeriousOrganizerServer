@@ -36,6 +36,7 @@ pub mod wstring;
 
 use crate::data::*;
 use crate::wstring::to_wstring;
+use std::io::Read;
 
 const BUFFER_SIZE: u32 = 1024;
 
@@ -176,7 +177,21 @@ fn parse_request(buf: &[u8]) -> Request {
         }
         RequestType::GetDirLabels => {
             let n1 = rdr.read_u32::<LittleEndian>().expect("Failed to deserialize GetDirLabels");
-            Request::DirLabels(n1)
+            Request::GetDirLabels(n1)
+        }
+
+        RequestType::AddDirLabels => {
+            let entry_id = rdr.read_u32::<LittleEndian>().expect("Failed to deserialize AddDirLabels");
+            let label_id_count = rdr.read_u32::<LittleEndian>().expect("Failed to deserialize AddDirLabels label count");
+
+            let mut label_ids = Vec::new();
+
+            for _ in 0..label_id_count {
+                let id = rdr.read_u32::<LittleEndian>().expect("Failed to parse AddDirLabels label id");
+                label_ids.push(id);
+            }
+
+            Request::AddDirLabels(entry_id, label_ids)
         }
         _ => panic!("Unsupported request! {:?}", request_type),
     }
@@ -244,9 +259,14 @@ fn handle_request(pipe_handle: HANDLE, req: Request, mut lens: &mut lens::Lens) 
             handle_labels_request(pipe_handle, &lens)
         }
 
-        Request::DirLabels(entry_id) => {
+        Request::GetDirLabels(entry_id) => {
             println!("LabelsGet");
             handle_dir_labels_request(pipe_handle, entry_id, &lens)
+        }
+        Request::AddDirLabels(entry_id, label_ids) => {
+            println!("AddDirLabels() Got entry {} and labels {:?} ", entry_id, label_ids);
+//            handle_dir_labels_request(pipe_handle, entry_id, &lens)
+            send_response(pipe_handle, &from_u32(42))
         }
     }
 }
