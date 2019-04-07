@@ -44,7 +44,7 @@ fn main() {
 
     let pipe_name = to_wstring("\\\\.\\pipe\\dude");
     let mut lens = lens::Lens::new();
-    update_lens(&mut lens);
+//    update_lens(&mut lens);
 
     unsafe {
         let h_pipe = CreateNamedPipeW(
