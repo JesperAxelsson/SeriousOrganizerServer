@@ -174,9 +174,9 @@ fn parse_request(buf: &[u8]) -> Request {
         RequestType::LabelsGet => {
             Request::LabelsGet
         }
-        RequestType::LabelsForDir => {
-            let n1 = rdr.read_u32::<LittleEndian>().expect("Failed to deserialize LabelsForDir");
-            Request::LabelsForDir(n1)
+        RequestType::GetDirLabels => {
+            let n1 = rdr.read_u32::<LittleEndian>().expect("Failed to deserialize GetDirLabels");
+            Request::DirLabels(n1)
         }
         _ => panic!("Unsupported request! {:?}", request_type),
     }
@@ -244,9 +244,9 @@ fn handle_request(pipe_handle: HANDLE, req: Request, mut lens: &mut lens::Lens) 
             handle_labels_request(pipe_handle, &lens)
         }
 
-        Request::LabelsForDir(entry_id) => {
+        Request::DirLabels(entry_id) => {
             println!("LabelsGet");
-            handle_labels_for_entry_request(pipe_handle,entry_id, &lens)
+            handle_dir_labels_request(pipe_handle, entry_id, &lens)
         }
     }
 }
@@ -305,11 +305,11 @@ fn handle_labels_request(pipe_handle: HANDLE, lens: &lens::Lens) -> usize {
     send_response(pipe_handle, &out_buf)
 }
 
-fn handle_labels_for_entry_request(pipe_handle: HANDLE, entry_id: u32, lens: &lens::Lens) -> usize {
+fn handle_dir_labels_request(pipe_handle: HANDLE, entry_id: u32, lens: &lens::Lens) -> usize {
     let mut out_buf = Vec::new();
     lens.entry_labels(entry_id).serialize(&mut Serializer::new(&mut out_buf))
         .expect("Failed to serialize label for entries");
-    println!("handle_labels_request bytes: {:?}", out_buf.len());
+    println!("handle_labels_for_entry_request bytes: {:?}", out_buf.len());
     send_response(pipe_handle, &out_buf)
 }
 
