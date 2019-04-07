@@ -244,10 +244,14 @@ fn handle_request(pipe_handle: HANDLE, req: Request, mut lens: &mut lens::Lens) 
 
 
 fn handle_dir_request(pipe_handle: HANDLE, lens: &lens::Lens, ix: u32) -> usize {
+    use serious_organizer_lib::models::EntryId;
+
     let mut out_buf = Vec::new();
 
     if let Some(dir) = lens.get_dir_entry(ix as usize) {
+        let EntryId(entry_id) = dir.id;
         let dir_response = DirEntryResponse {
+            id: entry_id,
             name: dir.name.clone(),
             path: dir.path.clone(),
             size: dir.size as u64,

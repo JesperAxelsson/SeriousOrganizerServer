@@ -38,6 +38,7 @@ pub enum Request {
 
 #[derive(Serialize, Debug)]
 pub struct DirEntryResponse {
+    pub id: i32,
     pub name: String,
     pub path: String,
     pub size: u64,
