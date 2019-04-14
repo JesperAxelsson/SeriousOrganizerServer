@@ -36,7 +36,7 @@ pub enum Request {
     LabelRemove(u32),
     LabelsGet,
     GetDirLabels(u32),
-    AddDirLabels(u32, Vec<u32>)
+    AddDirLabels(Vec<u32>, Vec<u32>),
 }
 
 

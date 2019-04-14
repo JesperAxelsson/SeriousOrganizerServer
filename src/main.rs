@@ -36,9 +36,11 @@ pub mod wstring;
 
 use crate::data::*;
 use crate::wstring::to_wstring;
-use std::io::Read;
+use std::io::{Read, Error};
+use std::io::Cursor;
+use byteorder::{ReadBytesExt, LittleEndian};
 
-const BUFFER_SIZE: u32 = 1024;
+const BUFFER_SIZE: u32 = 500*1024;
 
 fn main() {
     println!("Hello, world!");
@@ -116,9 +118,7 @@ fn send_response(pipe_handle: HANDLE, buf: &[u8]) -> usize {
 }
 
 fn parse_request(buf: &[u8]) -> Request {
-    use std::io::Cursor;
     use std::mem::transmute;
-    use byteorder::{ReadBytesExt, LittleEndian};
 
 //    println!("Parsing Request");
 
@@ -181,17 +181,10 @@ fn parse_request(buf: &[u8]) -> Request {
         }
 
         RequestType::AddDirLabels => {
-            let entry_id = rdr.read_u32::<LittleEndian>().expect("Failed to deserialize AddDirLabels");
-            let label_id_count = rdr.read_u32::<LittleEndian>().expect("Failed to deserialize AddDirLabels label count");
+            let entries = read_list(&mut rdr).expect("AddDirLabels(): Failed to read entries list");
+            let label_ids = read_list(&mut rdr).expect("AddDirLabels(): Failed to read labels list");
 
-            let mut label_ids = Vec::new();
-
-            for _ in 0..label_id_count {
-                let id = rdr.read_u32::<LittleEndian>().expect("Failed to parse AddDirLabels label id");
-                label_ids.push(id);
-            }
-
-            Request::AddDirLabels(entry_id, label_ids)
+            Request::AddDirLabels(entries, label_ids)
         }
         _ => panic!("Unsupported request! {:?}", request_type),
     }
@@ -199,6 +192,19 @@ fn parse_request(buf: &[u8]) -> Request {
 
 fn from_u32(number: u32) -> [u8; 4] {
     unsafe { std::mem::transmute(number) }
+}
+
+fn read_list(reader: &mut Cursor<&[u8]>) -> Result<Vec<u32>, std::io::Error> {
+    let list_count = reader.read_u32::<LittleEndian>()?;
+
+    let mut list = Vec::new();
+
+    for _ in 0..list_count {
+        let id = reader.read_u32::<LittleEndian>()?;
+        list.push(id);
+    }
+
+    return Ok( list);
 }
 
 /***
@@ -263,10 +269,10 @@ fn handle_request(pipe_handle: HANDLE, req: Request, mut lens: &mut lens::Lens) 
             println!("LabelsGet");
             handle_dir_labels_request(pipe_handle, entry_id, &lens)
         }
-        Request::AddDirLabels(entry_id, label_ids) => {
-            println!("AddDirLabels() Got entry {} and labels {:?} ", entry_id, label_ids);
-//            handle_dir_labels_request(pipe_handle, entry_id, &lens)
-            send_response(pipe_handle, &from_u32(42))
+        Request::AddDirLabels(entries, label_ids) => {
+            println!("AddDirLabels() Got entry {:?} and labels {:?} ", entries, label_ids);
+            lens.set_entry_labels(entries, label_ids);
+            send_response(pipe_handle, &from_u32(0))
         }
     }
 }
