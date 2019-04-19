@@ -22,7 +22,7 @@ use winapi::shared::ntdef::HANDLE;
 use winapi::um::fileapi::{ReadFile, WriteFile};
 use winapi::um::handleapi::INVALID_HANDLE_VALUE;
 use winapi::um::namedpipeapi::{ConnectNamedPipe, CreateNamedPipeW, DisconnectNamedPipe};
-use winapi::um::winbase::{PIPE_ACCESS_DUPLEX, PIPE_READMODE_MESSAGE, PIPE_TYPE_MESSAGE};
+use winapi::um::winbase::{PIPE_ACCESS_DUPLEX, PIPE_READMODE_MESSAGE, PIPE_TYPE_MESSAGE, PIPE_READMODE_BYTE};
 
 use serious_organizer_lib::{dir_search, lens, store};
 use serious_organizer_lib::lens::{SortColumn, SortOrder};
@@ -40,7 +40,7 @@ use std::io::{Read, Error};
 use std::io::Cursor;
 use byteorder::{ReadBytesExt, LittleEndian};
 
-const BUFFER_SIZE: u32 = 500*1024;
+const BUFFER_SIZE: u32 = 500 * 1024;
 
 fn main() {
     println!("Hello, world!");
@@ -53,7 +53,7 @@ fn main() {
         let h_pipe = CreateNamedPipeW(
             pipe_name.as_ptr(),
             PIPE_ACCESS_DUPLEX,
-            PIPE_TYPE_MESSAGE | PIPE_READMODE_MESSAGE,
+            PIPE_TYPE_MESSAGE | PIPE_READMODE_BYTE,
             1,           // Max instances
             BUFFER_SIZE, // Out buffer
             BUFFER_SIZE, // In buffer
@@ -68,22 +68,27 @@ fn main() {
 
                 let mut buf = [0u8; BUFFER_SIZE as usize];
                 let mut dw_read: DWORD = 0;
-                while ReadFile(
-                    h_pipe,
-                    &mut buf as *mut _ as LPVOID,
-                    ((buf.len()) - 1) as u32,
-                    &mut dw_read,
-                    null_mut(),
-                ) != FALSE
-                    {
+
+                while let Some(size) = read_size(h_pipe) {
+                    if ReadFile(
+                        h_pipe,
+                        &mut buf as *mut _ as LPVOID,
+                        size,
+                        &mut dw_read,
+                        null_mut(),
+                    ) != FALSE {
+//                        println!("Read data: {:?} as int: {:?}", dw_read, buf[0..(size as usize)].to_vec());
+
                         let _start = PreciseTime::now();
 
                         let req = parse_request(&buf);
                         let _sent = handle_request(h_pipe, req, &mut lens);
 
                         let _end = PreciseTime::now();
-                        //                    println!("{} bytes took {:?} ms", sent, start.to(end).num_milliseconds());
+
+//                        println!("{} bytes took {:?} ms", _sent, _start.to(_end).num_milliseconds());
                     }
+                }
             } else {
                 DisconnectNamedPipe(h_pipe);
             }
@@ -93,10 +98,39 @@ fn main() {
     println!("Farewell, cruel world!");
 }
 
+unsafe fn read_size(pipe_handle: HANDLE) -> Option<u32> {
+    let mut size_buf = [0u8; 4];
+    let mut dw_read: DWORD = 0;
+
+    if ReadFile(
+        pipe_handle,
+        &mut size_buf as *mut _ as LPVOID,
+        ((size_buf.len()) ) as u32,
+        &mut dw_read,
+        null_mut(),
+    ) != FALSE {
+        let size = to_u32(size_buf);
+//        println!("Read size: {:?} as int: {:?}", size_buf, size);
+        return Some(size);
+    } else {
+        panic!("Failed to read size");
+    }
+}
+
 fn send_response(pipe_handle: HANDLE, buf: &[u8]) -> usize {
     let mut dw_write: DWORD = 0;
     let success;
+    let size_buf = from_u32(buf.len() as u32);
+
     unsafe {
+        WriteFile(
+            pipe_handle,
+            size_buf.as_ptr() as LPCVOID,
+            (size_buf.len()) as u32,
+            &mut dw_write,
+            null_mut(),
+        );
+
         success = WriteFile(
             pipe_handle,
             buf.as_ptr() as LPCVOID,
@@ -120,10 +154,10 @@ fn send_response(pipe_handle: HANDLE, buf: &[u8]) -> usize {
 fn parse_request(buf: &[u8]) -> Request {
     use std::mem::transmute;
 
-//    println!("Parsing Request");
 
     let request_type = unsafe { transmute(buf[0]) };
     let slice = &buf[1..];
+//    println!("Parsing Request {:?}", request_type);
 
     let mut rdr = Cursor::new(slice);
 
@@ -173,6 +207,7 @@ fn parse_request(buf: &[u8]) -> Request {
             Request::LabelRemove(n1)
         }
         RequestType::LabelsGet => {
+            println!("Label get");
             Request::LabelsGet
         }
         RequestType::GetDirLabels => {
@@ -194,6 +229,10 @@ fn from_u32(number: u32) -> [u8; 4] {
     unsafe { std::mem::transmute(number) }
 }
 
+fn to_u32(number_buf: [u8; 4]) -> u32 {
+    unsafe { std::mem::transmute(number_buf) }
+}
+
 fn read_list(reader: &mut Cursor<&[u8]>) -> Result<Vec<u32>, std::io::Error> {
     let list_count = reader.read_u32::<LittleEndian>()?;
 
@@ -204,7 +243,7 @@ fn read_list(reader: &mut Cursor<&[u8]>) -> Result<Vec<u32>, std::io::Error> {
         list.push(id);
     }
 
-    return Ok( list);
+    return Ok(list);
 }
 
 /***
@@ -270,7 +309,7 @@ fn handle_request(pipe_handle: HANDLE, req: Request, mut lens: &mut lens::Lens) 
             handle_dir_labels_request(pipe_handle, entry_id, &lens)
         }
         Request::AddDirLabels(entries, label_ids) => {
-            println!("AddDirLabels() Got entry {:?} and labels {:?} ", entries, label_ids);
+            println!("AddDirLabels() Got entry {:?} and labels {:?} ", entries.len(), label_ids.len());
             lens.set_entry_labels(entries, label_ids);
             send_response(pipe_handle, &from_u32(0))
         }
