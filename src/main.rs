@@ -221,6 +221,14 @@ fn parse_request(buf: &[u8]) -> Request {
 
             Request::AddDirLabels(entries, label_ids)
         }
+
+        RequestType::FilterLabel => {
+            let label_id = rdr.read_u32::<LittleEndian>().expect("Failed to deserialize FilterLabel label_id");
+            let state = rdr.read_u8().expect("Failed to deserialize FilterLabel state");
+
+            Request::FilterLabel(label_id, state)
+        }
+
         _ => panic!("Unsupported request! {:?}", request_type),
     }
 }
@@ -312,6 +320,10 @@ fn handle_request(pipe_handle: HANDLE, req: Request, mut lens: &mut lens::Lens) 
             println!("AddDirLabels() Got entry {:?} and labels {:?} ", entries.len(), label_ids.len());
             lens.set_entry_labels(entries, label_ids);
             send_response(pipe_handle, &from_u32(0))
+        }
+
+        Request::FilterLabel(label_id, state) => {
+            0
         }
     }
 }

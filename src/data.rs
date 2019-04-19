@@ -20,6 +20,7 @@ pub enum RequestType {
     LabelsGet = 13,
     GetDirLabels = 14,
     AddDirLabels = 15,
+    FilterLabel = 16,
 }
 
 #[derive(Debug)]
@@ -37,6 +38,7 @@ pub enum Request {
     LabelsGet,
     GetDirLabels(u32),
     AddDirLabels(Vec<u32>, Vec<u32>),
+    FilterLabel(u32, u8),
 }
 
 
