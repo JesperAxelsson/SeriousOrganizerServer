@@ -110,10 +110,9 @@ unsafe fn read_size(pipe_handle: HANDLE) -> Option<u32> {
         null_mut(),
     ) != FALSE {
         let size = to_u32(size_buf);
-//        println!("Read size: {:?} as int: {:?}", size_buf, size);
         return Some(size);
     } else {
-        panic!("Failed to read size");
+        return None;
     }
 }
 
