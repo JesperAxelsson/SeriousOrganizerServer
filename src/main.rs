@@ -105,7 +105,7 @@ unsafe fn read_size(pipe_handle: HANDLE) -> Option<u32> {
     if ReadFile(
         pipe_handle,
         &mut size_buf as *mut _ as LPVOID,
-        ((size_buf.len()) ) as u32,
+        size_buf.len() as u32,
         &mut dw_read,
         null_mut(),
     ) != FALSE {
@@ -126,7 +126,7 @@ fn send_response(pipe_handle: HANDLE, buf: &[u8]) -> usize {
         WriteFile(
             pipe_handle,
             size_buf.as_ptr() as LPCVOID,
-            (size_buf.len()) as u32,
+            size_buf.len() as u32,
             &mut dw_write,
             null_mut(),
         );
@@ -134,7 +134,7 @@ fn send_response(pipe_handle: HANDLE, buf: &[u8]) -> usize {
         success = WriteFile(
             pipe_handle,
             buf.as_ptr() as LPCVOID,
-            (buf.len()) as u32,
+            buf.len() as u32,
             &mut dw_write,
             null_mut(),
         );
