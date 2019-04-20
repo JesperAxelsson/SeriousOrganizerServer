@@ -1,9 +1,10 @@
 use serious_organizer_lib::lens::{SortColumn, SortOrder};
 use serde::{Deserialize, Deserializer, Serialize};
+use num_derive::{FromPrimitive, ToPrimitive};
 
 
-#[derive(Serialize, Deserialize, Debug, PartialEq)]
-#[repr(u8)]
+#[derive(Debug, PartialEq, FromPrimitive, ToPrimitive)]
+#[repr(u16)]
 pub enum RequestType {
     DirRequest = 1,
     FileRequest = 2,
@@ -22,6 +23,7 @@ pub enum RequestType {
     AddDirLabels = 15,
     FilterLabel = 16,
 }
+
 
 #[derive(Debug)]
 pub enum Request {

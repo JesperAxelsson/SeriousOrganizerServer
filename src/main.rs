@@ -1,5 +1,6 @@
 #![deny(bare_trait_objects)]
 #![allow(unused_imports)]
+#![allow(unused_variables)]
 
 extern crate rmp_serde as rmps;
 extern crate serde;
@@ -153,12 +154,10 @@ fn send_response(pipe_handle: HANDLE, buf: &[u8]) -> usize {
 fn parse_request(buf: &[u8]) -> Request {
     use std::mem::transmute;
 
-
-    let request_type = unsafe { transmute(buf[0]) };
-    let slice = &buf[1..];
-//    println!("Parsing Request {:?}", request_type);
-
+    let slice = &buf[0..];
     let mut rdr = Cursor::new(slice);
+    let request_type: RequestType = num::FromPrimitive::from_u16(rdr.read_u16::<LittleEndian>().unwrap()).expect("Failed to read request type");
+    println!("Got request: {:?}", request_type);
 
     match request_type {
         RequestType::ReloadStore => Request::Reload,
@@ -180,7 +179,7 @@ fn parse_request(buf: &[u8]) -> Request {
         }
 
         RequestType::ChangeSearchText => {
-            let mut de = Deserializer::new(slice);
+            let mut de = Deserializer::new(&slice[2..]);
             let new_string =
                 Deserialize::deserialize(&mut de).expect("Failed to deserialize ChangeSearchText");
             Request::ChangeSearchText(new_string)
@@ -196,7 +195,7 @@ fn parse_request(buf: &[u8]) -> Request {
         }
 
         RequestType::LabelAdd => {
-            let mut de = Deserializer::new(slice);
+            let mut de = Deserializer::new(&slice[2..]);
             let new_string =
                 Deserialize::deserialize(&mut de).expect("Failed to deserialize LabelAdd");
             Request::LabelAdd(new_string)
@@ -322,7 +321,14 @@ fn handle_request(pipe_handle: HANDLE, req: Request, mut lens: &mut lens::Lens) 
         }
 
         Request::FilterLabel(label_id, state) => {
-            0
+            match state {
+                0 => lens.remove_label_filter(label_id),
+                1 => lens.add_inlude_label(label_id),
+                2 => lens.add_exclude_label(label_id),
+                _ => panic!("Ermagad, this state is not supported!"),
+            }
+
+            send_response(pipe_handle, &from_u32(0))
         }
     }
 }
