@@ -397,9 +397,9 @@ fn handle_dir_labels_request(pipe_handle: HANDLE, entry_id: u32, lens: &lens::Le
 
 fn update_lens(lens: &mut lens::Lens) {
     let mut paths = Vec::new();
-    paths.push(String::from("C:\\temp\\2test"));
+    paths.push(String::from("C:\\temp"));
     paths.push(String::from("D:\\temp"));
-    //    paths.push(String::from("J:\\temp"));
+    paths.push(String::from("J:\\temp"));
     paths.push(String::from("I:\\temp"));
 
     let mut dir_s = dir_search::get_all_data(paths);
