@@ -300,7 +300,7 @@ fn handle_request(pipe_handle: HANDLE, req: Request, mut lens: &mut lens::Lens) 
             send_response(pipe_handle, &from_u32(0))
         }
         Request::LabelRemove(id) => {
-//            println!("LabelRemove: {:?}", id);
+            println!("LabelRemove: {:?}", id);
             lens.remove_label(id);
             send_response(pipe_handle, &from_u32(0))
         }
