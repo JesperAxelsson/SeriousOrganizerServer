@@ -157,7 +157,7 @@ fn parse_request(buf: &[u8]) -> Request {
     let slice = &buf[0..];
     let mut rdr = Cursor::new(slice);
     let request_type: RequestType = num::FromPrimitive::from_u16(rdr.read_u16::<LittleEndian>().unwrap()).expect("Failed to read request type");
-    println!("Got request: {:?}", request_type);
+//    println!("Got request: {:?}", request_type);
 
     match request_type {
         RequestType::ReloadStore => Request::Reload,
@@ -205,7 +205,6 @@ fn parse_request(buf: &[u8]) -> Request {
             Request::LabelRemove(n1)
         }
         RequestType::LabelsGet => {
-            println!("Label get");
             Request::LabelsGet
         }
         RequestType::GetDirLabels => {
@@ -289,33 +288,33 @@ fn handle_request(pipe_handle: HANDLE, req: Request, mut lens: &mut lens::Lens) 
         }
         Request::DeletePath(_path) => 0,
         Request::Sort(col, order) => {
-            println!("SortRequest: {:?} {:?}", col, order);
+//            println!("SortRequest: {:?} {:?}", col, order);
             lens.order_by(col, order);
             let r: u32 = 1;
             send_response(pipe_handle, &from_u32(r))
         }
 
         Request::LabelAdd(name) => {
-            println!("LabelAdd: {:?}", name);
+//            println!("LabelAdd: {:?}", name);
             lens.add_label(&name);
             send_response(pipe_handle, &from_u32(0))
         }
         Request::LabelRemove(id) => {
-            println!("LabelRemove: {:?}", id);
+//            println!("LabelRemove: {:?}", id);
             lens.remove_label(id);
             send_response(pipe_handle, &from_u32(0))
         }
         Request::LabelsGet => {
-            println!("LabelsGet");
+//            println!("LabelsGet");
             handle_labels_request(pipe_handle, &lens)
         }
 
         Request::GetDirLabels(entry_id) => {
-            println!("LabelsGet");
+//            println!("LabelsGet");
             handle_dir_labels_request(pipe_handle, entry_id, &lens)
         }
         Request::AddDirLabels(entries, label_ids) => {
-            println!("AddDirLabels() Got entry {:?} and labels {:?} ", entries.len(), label_ids.len());
+//            println!("AddDirLabels() Got entry {:?} and labels {:?} ", entries.len(), label_ids.len());
             lens.set_entry_labels(entries, label_ids);
             send_response(pipe_handle, &from_u32(0))
         }
