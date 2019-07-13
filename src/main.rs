@@ -399,8 +399,8 @@ fn update_lens(lens: &mut lens::Lens) {
     let mut paths = Vec::new();
     paths.push(String::from("C:\\temp"));
     paths.push(String::from("D:\\temp"));
-    paths.push(String::from("J:\\temp"));
-    paths.push(String::from("I:\\temp"));
+    paths.push(String::from("E:\\temp"));
+    paths.push(String::from("F:\\temp"));
 
     let mut dir_s = dir_search::get_all_data(paths);
 
