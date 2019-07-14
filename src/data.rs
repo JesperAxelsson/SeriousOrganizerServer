@@ -22,6 +22,9 @@ pub enum RequestType {
     GetDirLabels = 14,
     AddDirLabels = 15,
     FilterLabel = 16,
+    AddLocation = 17,
+    RemoveLocation = 18,
+    GetLocations = 19,
 }
 
 
@@ -35,12 +38,18 @@ pub enum Request {
     Reload,
     DeletePath(String),
     Sort(SortColumn, SortOrder),
+    
     LabelAdd(String),
     LabelRemove(u32),
     LabelsGet,
+    
     GetDirLabels(u32),
     AddDirLabels(Vec<u32>, Vec<u32>),
     FilterLabel(u32, u8),
+
+    AddLocation(String, String),
+    RemoveLocation(u32),
+    GetLocations,
 }
 
 

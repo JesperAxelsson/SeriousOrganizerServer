@@ -207,23 +207,40 @@ fn parse_request(buf: &[u8]) -> Request {
         RequestType::LabelsGet => {
             Request::LabelsGet
         }
+
         RequestType::GetDirLabels => {
             let n1 = rdr.read_u32::<LittleEndian>().expect("Failed to deserialize GetDirLabels");
             Request::GetDirLabels(n1)
         }
-
         RequestType::AddDirLabels => {
             let entries = read_list(&mut rdr).expect("AddDirLabels(): Failed to read entries list");
             let label_ids = read_list(&mut rdr).expect("AddDirLabels(): Failed to read labels list");
 
             Request::AddDirLabels(entries, label_ids)
         }
-
         RequestType::FilterLabel => {
             let label_id = rdr.read_u32::<LittleEndian>().expect("Failed to deserialize FilterLabel label_id");
             let state = rdr.read_u8().expect("Failed to deserialize FilterLabel state");
 
             Request::FilterLabel(label_id, state)
+        }
+
+        RequestType::AddLocation => {
+            let raw_s1 = read_byte_list(&mut rdr).unwrap();
+            let raw_s2 = read_byte_list(&mut rdr).unwrap();
+
+            let name_string = String::from_utf8(raw_s1).expect("Failed to deserialize AddLocation name_string");
+            let path_string=  String::from_utf8(raw_s2).expect("Failed to deserialize AddLocation path_string");
+
+            Request::AddLocation(name_string, path_string)
+        }
+        RequestType::RemoveLocation => {
+            let location_id = rdr.read_u32::<LittleEndian>().expect("Failed to deserialize RemoveLocation location_id");
+
+            Request::RemoveLocation(location_id)
+        }
+        RequestType::GetLocations => {
+            Request::GetLocations
         }
 
         _ => panic!("Unsupported request! {:?}", request_type),
@@ -247,6 +264,21 @@ fn read_list(reader: &mut Cursor<&[u8]>) -> Result<Vec<u32>, std::io::Error> {
         let id = reader.read_u32::<LittleEndian>()?;
         list.push(id);
     }
+
+    return Ok(list);
+}
+
+fn read_byte_list(reader: &mut Cursor<&[u8]>) -> Result<Vec<u8>, std::io::Error> {
+    let list_count = reader.read_u32::<LittleEndian>()?;
+
+    let mut list = Vec::new();
+
+    for _ in 0..list_count {
+        let id = reader.read_u8()?;
+        list.push(id);
+    }
+
+    println!("Read byte list: {:?}  {:?}", list_count, list.len());
 
     return Ok(list);
 }
@@ -329,6 +361,16 @@ fn handle_request(pipe_handle: HANDLE, req: Request, mut lens: &mut lens::Lens) 
 
             send_response(pipe_handle, &from_u32(0))
         }
+
+        Request::AddLocation(name, path) => {
+            lens.add_location(&name, &path);
+            send_response(pipe_handle, &from_u32(0))
+        }
+        Request::RemoveLocation(location_id) => {
+            lens.remove_location(location_id);
+            send_response(pipe_handle, &from_u32(0))
+        }
+        Request::GetLocations => handle_locations_request(pipe_handle, &lens)
     }
 }
 
@@ -393,6 +435,15 @@ fn handle_dir_labels_request(pipe_handle: HANDLE, entry_id: u32, lens: &lens::Le
     println!("handle_labels_for_entry_request bytes: {:?}", out_buf.len());
     send_response(pipe_handle, &out_buf)
 }
+
+fn handle_locations_request(pipe_handle: HANDLE, lens: &lens::Lens) -> usize {
+    let mut out_buf = Vec::new();
+    lens.get_locations().serialize(&mut Serializer::new(&mut out_buf))
+        .expect("Failed to serialize locations request");
+    println!("handle_locations_request bytes: {:?}", out_buf.len());
+    send_response(pipe_handle, &out_buf)
+}
+
 
 
 fn update_lens(lens: &mut lens::Lens) {
