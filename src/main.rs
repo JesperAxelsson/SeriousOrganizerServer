@@ -371,8 +371,10 @@ fn handle_request(pipe_handle: HANDLE, req: Request, mut lens: &mut lens::Lens) 
             send_response(pipe_handle, &from_u32(0))
         }
         Request::GetLocations => handle_locations_request(pipe_handle, &lens)
+        // add update?
     }
 }
+
 
 
 fn handle_dir_request(pipe_handle: HANDLE, lens: &lens::Lens, ix: u32) -> usize {
@@ -444,17 +446,9 @@ fn handle_locations_request(pipe_handle: HANDLE, lens: &lens::Lens) -> usize {
     send_response(pipe_handle, &out_buf)
 }
 
-
-
 fn update_lens(lens: &mut lens::Lens) {
-    let mut paths = Vec::new();
-    paths.push(String::from("C:\\temp"));
-    paths.push(String::from("D:\\temp"));
-    paths.push(String::from("E:\\temp"));
-    paths.push(String::from("F:\\temp"));
-
+    let paths = lens.get_locations().iter().map(|e| (e.id, e.path.clone())).collect();
     let mut dir_s = dir_search::get_all_data(paths);
 
     lens.update_data(&mut dir_s);
-//    lens.order_by( SortColumn::Size, SortOrder::Desc);
 }
