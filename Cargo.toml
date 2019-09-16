@@ -19,6 +19,9 @@ num-derive = "0.2.5"
 
 byteorder = "1.3.2"
 
+log = "0.4.*"
+simplelog = "^0.7.2"
+
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3.7", features = ["winuser", "ntdef", "namedpipeapi", "minwinbase", "minwindef", "winbase", "handleapi", "fileapi" ] }
 

@@ -12,6 +12,8 @@ extern crate time;
 extern crate winapi;
 extern crate byteorder;
 extern crate num;
+#[macro_use] 
+extern crate log;
 
 use time::PreciseTime;
 
@@ -31,6 +33,8 @@ use serious_organizer_lib::lens::{SortColumn, SortOrder};
 use rmps::{Deserializer, Serializer};
 use serde::{Deserialize, Serialize};
 
+use simplelog::*;
+
 pub mod data;
 pub mod wstring;
 
@@ -44,7 +48,14 @@ use byteorder::{ReadBytesExt, LittleEndian};
 const BUFFER_SIZE: u32 = 500 * 1024;
 
 fn main() {
-    println!("Hello, world!");
+     CombinedLogger::init(
+        vec![
+            SimpleLogger::new(LevelFilter::Info, Config::default()),
+            WriteLogger::new(LevelFilter::Info, Config::default(), std::fs::File::create("serious_server.log").expect("Failed to init logger")),
+        ]
+    ).unwrap();
+
+    info!("Hello, world!");
 
     let pipe_name = to_wstring("\\\\.\\pipe\\dude");
     let mut lens = lens::Lens::new();
@@ -65,7 +76,7 @@ fn main() {
         while h_pipe != INVALID_HANDLE_VALUE {
             let connected = ConnectNamedPipe(h_pipe, null_mut());
             if connected != FALSE {
-                println!("Connected!");
+                debug!("Connected!");
 
                 let mut buf = [0u8; BUFFER_SIZE as usize];
                 let mut dw_read: DWORD = 0;
@@ -78,7 +89,7 @@ fn main() {
                         &mut dw_read,
                         null_mut(),
                     ) != FALSE {
-//                        println!("Read data: {:?} as int: {:?}", dw_read, buf[0..(size as usize)].to_vec());
+                       trace!("Read data: {:?} as int: {:?}", dw_read, buf[0..(size as usize)].to_vec());
 
                         let _start = PreciseTime::now();
 
@@ -87,7 +98,7 @@ fn main() {
 
                         let _end = PreciseTime::now();
 
-//                        println!("{} bytes took {:?} ms", _sent, _start.to(_end).num_milliseconds());
+                       trace!("{} bytes took {:?} ms", _sent, _start.to(_end).num_milliseconds());
                     }
                 }
             } else {
@@ -96,7 +107,7 @@ fn main() {
         }
     }
 
-    println!("Farewell, cruel world!");
+    info!("Farewell, cruel world!");
 }
 
 unsafe fn read_size(pipe_handle: HANDLE) -> Option<u32> {
@@ -141,10 +152,11 @@ fn send_response(pipe_handle: HANDLE, buf: &[u8]) -> usize {
     }
 
     if success == FALSE {
-        println!("Thingie closed during write?");
+        warn!("Thingie closed during write?");
     }
 
     if success == TRUE && dw_write != buf.len() as u32 {
+        error!("Write less then buffer!");
         panic!("Write less then buffer!");
     }
 
@@ -157,7 +169,7 @@ fn parse_request(buf: &[u8]) -> Request {
     let slice = &buf[0..];
     let mut rdr = Cursor::new(slice);
     let request_type: RequestType = num::FromPrimitive::from_u16(rdr.read_u16::<LittleEndian>().unwrap()).expect("Failed to read request type");
-//    println!("Got request: {:?}", request_type);
+    trace!("Got request: {:?}", request_type);
 
     match request_type {
         RequestType::ReloadStore => Request::Reload,
@@ -278,8 +290,6 @@ fn read_byte_list(reader: &mut Cursor<&[u8]>) -> Result<Vec<u8>, std::io::Error>
         list.push(id);
     }
 
-    println!("Read byte list: {:?}  {:?}", list_count, list.len());
-
     return Ok(list);
 }
 
@@ -291,7 +301,7 @@ fn read_byte_list(reader: &mut Cursor<&[u8]>) -> Result<Vec<u8>, std::io::Error>
 */
 
 fn handle_request(pipe_handle: HANDLE, req: Request, mut lens: &mut lens::Lens) -> usize {
-    //    println!("Handling Request");
+    trace!("Handling Request");
 
     match req {
         Request::DirRequest(ix) => handle_dir_request(pipe_handle, &lens, ix),
@@ -301,7 +311,7 @@ fn handle_request(pipe_handle: HANDLE, req: Request, mut lens: &mut lens::Lens) 
             send_response(pipe_handle, &from_u32(lens.ix_list.len() as u32))
         }
         Request::DirCount => {
-            println!("DirCount {}", lens.get_dir_count() as u32);
+            debug!("DirCount {}", lens.get_dir_count() as u32);
             send_response(pipe_handle, &from_u32(lens.get_dir_count() as u32))
         }
         Request::DirFileCount(ix) => {
@@ -309,7 +319,7 @@ fn handle_request(pipe_handle: HANDLE, req: Request, mut lens: &mut lens::Lens) 
                 .get_file_count(ix as usize)
                 .expect(&format!("Invalid index {} during file count", ix))
                 as u32;
-            println!("FileCount {}", file_count);
+            debug!("FileCount {}", file_count);
             send_response(pipe_handle, &from_u32(file_count))
         }
         Request::Reload => {
@@ -320,33 +330,33 @@ fn handle_request(pipe_handle: HANDLE, req: Request, mut lens: &mut lens::Lens) 
         }
         Request::DeletePath(_path) => 0,
         Request::Sort(col, order) => {
-//            println!("SortRequest: {:?} {:?}", col, order);
+           debug!("SortRequest: {:?} {:?}", col, order);
             lens.order_by(col, order);
             let r: u32 = 1;
             send_response(pipe_handle, &from_u32(r))
         }
 
         Request::LabelAdd(name) => {
-//            println!("LabelAdd: {:?}", name);
+           debug!("LabelAdd: {:?}", name);
             lens.add_label(&name);
             send_response(pipe_handle, &from_u32(0))
         }
         Request::LabelRemove(id) => {
-            println!("LabelRemove: {:?}", id);
+            debug!("LabelRemove: {:?}", id);
             lens.remove_label(id);
             send_response(pipe_handle, &from_u32(0))
         }
         Request::LabelsGet => {
-//            println!("LabelsGet");
+           debug!("LabelsGet");
             handle_labels_request(pipe_handle, &lens)
         }
 
         Request::GetDirLabels(entry_id) => {
-//            println!("LabelsGet");
+           debug!("GetDirLabels");
             handle_dir_labels_request(pipe_handle, entry_id, &lens)
         }
         Request::AddDirLabels(entries, label_ids) => {
-//            println!("AddDirLabels() Got entry {:?} and labels {:?} ", entries.len(), label_ids.len());
+           debug!("AddDirLabels() Got entry {:?} and labels {:?} ", entries.len(), label_ids.len());
             lens.set_entry_labels(entries, label_ids);
             send_response(pipe_handle, &from_u32(0))
         }
@@ -402,7 +412,7 @@ fn handle_dir_request(pipe_handle: HANDLE, lens: &lens::Lens, ix: u32) -> usize 
 
 
 fn handle_file_request(pipe_handle: HANDLE, lens: &lens::Lens, dir_ix: u32, file_ix: u32) -> usize {
-    println!("FileRequest dir: {} file: {}", dir_ix, file_ix);
+    trace!("FileRequest dir: {} file: {}", dir_ix, file_ix);
     let mut out_buf = Vec::new();
 
     if let Some(file) = lens.get_file_entry(dir_ix as usize, file_ix as usize) {
@@ -426,7 +436,7 @@ fn handle_labels_request(pipe_handle: HANDLE, lens: &lens::Lens) -> usize {
     let mut out_buf = Vec::new();
     lens.get_labels().serialize(&mut Serializer::new(&mut out_buf))
         .expect("Failed to serialize labels request");
-    println!("handle_labels_request bytes: {:?}", out_buf.len());
+    trace!("handle_labels_request bytes: {:?}", out_buf.len());
     send_response(pipe_handle, &out_buf)
 }
 
@@ -434,7 +444,7 @@ fn handle_dir_labels_request(pipe_handle: HANDLE, entry_id: u32, lens: &lens::Le
     let mut out_buf = Vec::new();
     lens.entry_labels(entry_id).serialize(&mut Serializer::new(&mut out_buf))
         .expect("Failed to serialize label for entries");
-    println!("handle_labels_for_entry_request bytes: {:?}", out_buf.len());
+    trace!("handle_labels_for_entry_request bytes: {:?}", out_buf.len());
     send_response(pipe_handle, &out_buf)
 }
 
@@ -442,7 +452,7 @@ fn handle_locations_request(pipe_handle: HANDLE, lens: &lens::Lens) -> usize {
     let mut out_buf = Vec::new();
     lens.get_locations().serialize(&mut Serializer::new(&mut out_buf))
         .expect("Failed to serialize locations request");
-    println!("handle_locations_request bytes: {:?}", out_buf.len());
+    trace!("handle_locations_request bytes: {:?}", out_buf.len());
     send_response(pipe_handle, &out_buf)
 }
 
