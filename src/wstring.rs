@@ -14,6 +14,16 @@ pub fn to_wstring(str: &str) -> Vec<u16> {
     wide
 }
 
+pub fn to_wnocstring(str: &str) -> Vec<u16> {
+    let mut wide: Vec<u16> = OsStr::new(str).encode_wide().collect();
+
+    if wide.capacity() != wide.len() {
+        wide.shrink_to_fit();
+    }
+
+    wide
+}
+
 pub fn to_string(str: &[u16]) -> String {
     use std;
     let vec = str.split(|c| *c == 0).next();

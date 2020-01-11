@@ -11,7 +11,14 @@
       <sourceFolder url="file://$MODULE_DIR$/SeriousOrganizerLib/examples" isTestSource="false" />
       <sourceFolder url="file://$MODULE_DIR$/SeriousOrganizerLib/tests" isTestSource="true" />
       <sourceFolder url="file://$MODULE_DIR$/SeriousOrganizerLib/benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/../SeriousOrganizerServer\examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/../SeriousOrganizerServer\tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/../SeriousOrganizerServer\benches" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/SeriousOrganizerLib\examples" isTestSource="false" />
+      <sourceFolder url="file://$MODULE_DIR$/SeriousOrganizerLib\tests" isTestSource="true" />
+      <sourceFolder url="file://$MODULE_DIR$/SeriousOrganizerLib\benches" isTestSource="true" />
       <excludeFolder url="file://$MODULE_DIR$/SeriousOrganizerLib/target" />
+      <excludeFolder url="file://$MODULE_DIR$/SeriousOrganizerLib\target" />
       <excludeFolder url="file://$MODULE_DIR$/target" />
     </content>
     <orderEntry type="inheritedJdk" />

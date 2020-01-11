@@ -1,0 +1,8 @@
+09:45:14 [ INFO] Start service
+09:45:14 [ INFO] Hello, world!
+09:45:14 [DEBUG] (2) serious_organizer_lib::store: Got 17829 files in filecache
+09:45:14 [DEBUG] (2) serious_organizer_lib::store: Now got files for entries 17829
+09:45:14 [ INFO] ix_list update with 17829 entries took: 50 ms
+09:45:14 [TRACE] (2) serious_organizer_lib::lens: [SeriousOrganizerLib\src\lens.rs:156] ix_list include: {}  
+09:45:14 [TRACE] (2) serious_organizer_lib::lens: [SeriousOrganizerLib\src\lens.rs:157] ix_list exclude: {}  
+09:45:14 [ INFO] Connecting pipe

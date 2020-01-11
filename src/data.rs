@@ -1,7 +1,6 @@
-use serious_organizer_lib::lens::{SortColumn, SortOrder};
-use serde::{Deserialize, Deserializer, Serialize};
 use num_derive::{FromPrimitive, ToPrimitive};
-
+use serde::{Deserialize, Deserializer, Serialize};
+use serious_organizer_lib::lens::{SortColumn, SortOrder};
 
 #[derive(Debug, PartialEq, FromPrimitive, ToPrimitive)]
 #[repr(u16)]
@@ -27,7 +26,6 @@ pub enum RequestType {
     GetLocations = 19,
 }
 
-
 #[derive(Debug)]
 pub enum Request {
     DirCount,
@@ -38,11 +36,11 @@ pub enum Request {
     Reload,
     DeletePath(String),
     Sort(SortColumn, SortOrder),
-    
+
     LabelAdd(String),
     LabelRemove(u32),
     LabelsGet,
-    
+
     GetDirLabels(u32),
     AddDirLabels(Vec<u32>, Vec<u32>),
     FilterLabel(u32, u8),
@@ -51,7 +49,6 @@ pub enum Request {
     RemoveLocation(u32),
     GetLocations,
 }
-
 
 #[derive(Serialize, Debug)]
 pub struct DirEntryResponse {
